@@ -1,0 +1,17 @@
+version: 0.0
+Resources:
+  - TargetService:
+      Type: AWS::ECS::Service
+      Properties:
+        TaskDefinition: "arn:aws:ecs:us-east-1:533267310802:task-definition/nginx-deploy-ecs:1"
+        LoadBalancerInfo:
+          ContainerName: "nginx-deploy-ecs"
+          ContainerPort: 80
+# Optional properties
+        PlatformVersion: "LATEST"
+        NetworkConfiguration:
+          AwsvpcConfiguration:
+            Subnets: ["subnet-04918f810f384ada5","subnet-03dc2e752ac2556c6", "subnet-02d23f3d36c0ce766"]
+            SecurityGroups: ["sg-08b0ae2d5c19c0440"]
+            AssignPublicIp: "DISABLED"
+

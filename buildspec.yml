@@ -1,0 +1,45 @@
+version: 0.2
+
+env:
+  secrets-manager:
+    DOCKERHUB_PASS: "docker2:senha"
+    DOCKERHUB_USERNAME: "docker2:login"
+phases:
+  pre_build:
+    commands:
+      - echo Logging in to Amazon ECR...
+      - aws --version
+      - docker login --username $DOCKERHUB_USERNAME --password $DOCKERHUB_PASS
+      - aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin 533267310802.dkr.ecr.us-east-2.amazonaws.com
+      - aws ecr batch-delete-image --repository-name nginx-deploy-ecs --image-ids imageTag=latest
+      - REPOSITORY_URI=533267310802.dkr.ecr.us-east-2.amazonaws.com/nginx-deploy-ecs
+      - COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
+      - IMAGE_TAG=latest
+  build:
+    commands:
+      - echo Build started on `date`
+      - echo Building the Docker image...
+      - docker build -t $REPOSITORY_URI:latest -f Dockerfile .
+      - docker tag $REPOSITORY_URI:latest $REPOSITORY_URI:$IMAGE_TAG
+  post_build:
+    commands:
+      - echo Build completed on `date`
+      - echo Pushing the Docker images...
+      - docker push $REPOSITORY_URI:latest
+      - docker push $REPOSITORY_URI:$IMAGE_TAG
+      - echo Writing image definitions file...
+      - printf '[{"name":"agfweb","imageUri":"%s"},' $REPOSITORY_URI:$IMAGE_TAG > imagedefinitions.json
+artifacts:
+  files: 
+    - 'imagedefinitions.json'
+    - 'appspec.yaml'
+    - 'taskdef.json'
+  secondary-artifacts:
+    DefinitionArtifact:
+      files:
+        - appspec.yaml
+        - taskdef.json
+    ImageArtifact:
+      files:
+        - imagedefinitions.json
+
